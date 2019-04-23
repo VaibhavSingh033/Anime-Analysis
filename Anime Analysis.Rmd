@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(lubridate)
+library(gganimate)
 theme_set(theme_minimal())
 ```
 
@@ -18,9 +19,12 @@ tidy_anime <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience
 head(tidy_anime)
 str(tidy_anime)
 
-tidy_anime <- tidy_anime %>% mutate(start_date = lubridate::ymd(start_date),
-              end_date = lubridate::ymd(end_date)) %>% 
-              filter(rank != 0, popularity != 0)
+tidy_anime <- tidy_anime %>%
+  mutate(
+    start_date = lubridate::ymd(start_date),
+    end_date = lubridate::ymd(end_date)
+  ) %>%
+  filter(rank != 0, popularity != 0)
 ```
 
 Most Popular Anime
@@ -65,7 +69,7 @@ tidy_anime %>%
   ungroup() %>%
   mutate(
     name = fct_reorder(name, -rank),
-    airing=as.factor(airing),
+    airing = as.factor(airing),
     airing = fct_recode(airing,
       "ALREADY AIRED" = "FALSE",
       "CURRENTLY AIRING" = "TRUE"
@@ -78,10 +82,27 @@ tidy_anime %>%
 Which Genre was popular in which year
 
 ```{r}
-tidy_anime %>% select(name,genre,airing,start_date,end_date, rank) %>% 
-filter(genre %in% top_16_genre) %>% mutate(start_year=year(start_date)) %>% 
-  select(start_year,genre) %>% count(start_year, genre) %>% filter(start_year<2019) %>% 
-  ggplot(aes(start_year,n,fill=genre ))+geom_area( show.legend = FALSE)+facet_wrap(~genre)+theme(axis.text.x = element_text(angle = 45, hjust = 1))+
-  labs(title="Popular Genre by Year", x="Year",y="Count of Anime", subtitle = "Analysing the Genres which became popular with time")+scale_x_continuous(breaks = c(1920,1940,1960,1980,1990,2000,2010,2018))
+
+p<- tidy_anime %>%
+  select(name, genre, airing, start_date, end_date, rank) %>%
+  filter(genre %in% top_16_genre) %>%
+  mutate(start_year = lubridate::year(start_date)) %>%
+  select(start_year, genre) %>%
+  add_count(start_year, genre) %>%
+  filter(start_year < 2019 ) %>%
+  arrange(start_year) %>%
+  unique() %>%
+  ggplot(aes( start_year,n, color = genre)) + geom_point(show.legend = FALSE)  +
+  geom_path(show.legend = FALSE)+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  +
+  facet_wrap(~genre) + 
+  labs(title = "Analysing Genre Treng in Anime by Year",
+subtitle= "Year: {round(frame_along,0)}", y="",x="")+
+  transition_reveal(along=start_year) +
+  ease_aes('linear')
+  
+
+animate(p,102,3)
+
 ```
 
